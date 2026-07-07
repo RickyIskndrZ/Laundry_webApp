@@ -13,6 +13,7 @@ const {
   cancelPayment,
   processPickup,
   deleteOrder,
+  resetAllOrders,
 } = require('../controllers/OrderController');
 
 router.use(verifyToken);
@@ -42,7 +43,8 @@ router.patch('/:id/cancel-pay', requireRole(1, 2), cancelPayment);
 // Admin & Operator bisa proses pickup (Selesai→Diambil)
 router.patch('/:id/pickup', requireRole(1, 2), processPickup);
 
-// Admin saja bisa hapus
+// Admin saja bisa hapus (individu dan semua)
 router.delete('/:id', requireRole(1), deleteOrder);
+router.delete('/', requireRole(1), resetAllOrders);
 
 module.exports = router;

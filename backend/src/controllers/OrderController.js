@@ -9,6 +9,13 @@ const STATUS_LABELS = {
   5: 'Diambil',
 };
 
+const formatDateMySQL = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 const insertStatusLog = async (db, orderId, customerId, userId, statusCode) => {
   try {
     await db.run(
@@ -95,8 +102,8 @@ const createOrder = async (req, res) => {
 
     await db.run('BEGIN TRANSACTION');
     try {
-      const orderDate = order_date ? new Date(order_date).toISOString() : new Date().toISOString();
-      const orderEndDate = order_end_date ? new Date(order_end_date).toISOString() : null;
+      const orderDate = order_date ? formatDateMySQL(order_date) : formatDateMySQL(new Date());
+      const orderEndDate = order_end_date ? formatDateMySQL(order_end_date) : null;
 
       const orderResult = await db.run(
         `INSERT INTO trans_order (id_customer, order_code, order_date, order_end_date, order_status, total, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
@@ -343,7 +350,7 @@ const weighOnly = async (req, res) => {
     }
 
     const order_change = order.order_pay ? Number(order.order_pay) - totalBiaya : null;
-    const orderEndDate = order_end_date ? new Date(order_end_date).toISOString() : order.order_end_date;
+    const orderEndDate = order_end_date ? formatDateMySQL(order_end_date) : order.order_end_date;
 
     await db.run('BEGIN TRANSACTION');
     try {
@@ -497,7 +504,7 @@ const processPickup = async (req, res) => {
     try {
       await db.run(`UPDATE trans_order SET order_status = 5, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [Number(id)]);
       
-      const finalPickupDate = pickup_date ? new Date(pickup_date).toISOString() : null;
+      const finalPickupDate = pickup_date ? formatDateMySQL(pickup_date) : null;
       pickupResult = await db.run(
         `INSERT INTO trans_laundry_pickup (id_order, id_customer, id_user, pickup_date, notes, created_at, updated_at) VALUES (?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         [Number(id), order.id_customer, req.user.id_user, finalPickupDate, notes || null]
@@ -543,6 +550,30 @@ const deleteOrder = async (req, res) => {
   }
 };
 
+const resetAllOrders = async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.run('BEGIN TRANSACTION');
+    try {
+      await db.run(`DELETE FROM trans_laundry_pickup`);
+      await db.run(`DELETE FROM trans_order_detail`);
+      await db.run(`DELETE FROM trans_order`);
+      // Optional: Reset auto-increment
+      await db.run(`ALTER TABLE trans_order AUTO_INCREMENT = 1`);
+      await db.run(`ALTER TABLE trans_order_detail AUTO_INCREMENT = 1`);
+      await db.run(`ALTER TABLE trans_laundry_pickup AUTO_INCREMENT = 1`);
+      await db.run('COMMIT');
+    } catch (e) {
+      await db.run('ROLLBACK');
+      throw e;
+    }
+    return res.status(200).json({ success: true, message: 'Seluruh transaksi berhasil direset (dihapus).' });
+  } catch (error) {
+    console.error('Reset all orders error:', error);
+    return res.status(500).json({ success: false, message: 'Gagal mereset transaksi.' });
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -555,4 +586,5 @@ module.exports = {
   cancelPayment,
   processPickup,
   deleteOrder,
+  resetAllOrders,
 };

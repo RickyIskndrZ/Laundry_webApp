@@ -1,5 +1,12 @@
 const { getDb } = require('../config/db');
 
+const formatDateMySQL = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 // =============================================
 // LAPORAN PENJUALAN (Khusus Pimpinan)
 // =============================================
@@ -16,13 +23,13 @@ const getSalesReport = async (req, res) => {
 
   if (start_date) {
     conditions.push(`o.order_date >= ?`);
-    params.push(new Date(start_date).toISOString());
+    params.push(formatDateMySQL(start_date));
   }
   if (end_date) {
     const end = new Date(end_date);
     end.setHours(23, 59, 59, 999);
     conditions.push(`o.order_date <= ?`);
-    params.push(end.toISOString());
+    params.push(formatDateMySQL(end));
   }
 
   if (conditions.length > 0) {
@@ -128,7 +135,7 @@ const getDashboardStats = async (req, res) => {
       db.get(`SELECT COUNT(*) as count FROM trans_order`),
       db.get(`SELECT COUNT(*) as count FROM trans_order WHERE order_status = 0`),
       db.get(`SELECT COUNT(*) as count FROM trans_order WHERE order_status = 1`),
-      db.get(`SELECT COUNT(*) as count FROM trans_order WHERE order_date >= ? AND order_date < ?`, [today.toISOString(), tomorrow.toISOString()]),
+      db.get(`SELECT COUNT(*) as count FROM trans_order WHERE order_date >= ? AND order_date < ?`, [formatDateMySQL(today), formatDateMySQL(tomorrow)]),
       db.get(`SELECT SUM(total) as sum FROM trans_order`),
       db.get(`SELECT COUNT(*) as count FROM customer`),
     ]);

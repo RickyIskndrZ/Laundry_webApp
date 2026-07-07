@@ -7,7 +7,7 @@ const getAllArchives = async (req, res) => {
   try {
     const db = await getDb();
     const allPickupsRaw = await db.all(`
-      SELECT p.*, o.order_code, o.order_status, c.customer_name, c.phone, u.name as user_name, u.email as user_email, u.id_level, l.level_name 
+      SELECT p.*, o.order_code, o.order_date, o.order_status, o.total, c.customer_name, c.phone, u.name as user_name, u.email as user_email, u.id_level, l.level_name 
       FROM trans_laundry_pickup p
       LEFT JOIN trans_order o ON p.id_order = o.id
       LEFT JOIN customer c ON p.id_customer = c.id
@@ -25,14 +25,16 @@ const getAllArchives = async (req, res) => {
     const validArchivesRaw = allPickupsRaw.filter(a => !a.notes || !a.notes.startsWith('LOG_STATUS:'));
 
     const validArchives = validArchivesRaw.map(log => {
-      const { order_code, order_status, customer_name, phone, user_name, user_email, id_level, level_name, ...pickupData } = log;
+      const { order_code, order_date, order_status, total, customer_name, phone, user_name, user_email, id_level, level_name, ...pickupData } = log;
       
       return {
         ...pickupData,
         order: {
           id: pickupData.id_order,
           order_code,
+          order_date,
           order_status,
+          total,
           order_details: detailsRaw.filter(d => d.id_order === pickupData.id_order).map(d => ({
             ...d,
             service: {

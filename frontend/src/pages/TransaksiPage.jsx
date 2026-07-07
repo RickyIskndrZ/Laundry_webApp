@@ -190,6 +190,9 @@ const TransaksiPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -211,6 +214,35 @@ const TransaksiPage = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setActionLoading(true);
+    try {
+      await api.delete(`/orders/${deleteTarget.id}`);
+      toast.success('Transaksi berhasil dihapus.');
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal menghapus transaksi.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetAll = async () => {
+    setActionLoading(true);
+    try {
+      await api.delete('/orders');
+      toast.success('Seluruh transaksi berhasil direset.');
+      setShowResetModal(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal mereset transaksi.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const filtered = orders.filter(o => {
     const matchSearch = o.order_code.toLowerCase().includes(search.toLowerCase()) ||
       o.customer?.customer_name?.toLowerCase().includes(search.toLowerCase());
@@ -227,9 +259,14 @@ const TransaksiPage = () => {
             Riwayat semua order laundry
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)} id="btn-new-order">
-          <Plus size={16} /> Terima Laundry
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn-secondary" onClick={() => setShowResetModal(true)} style={{ color: '#f87171', borderColor: 'rgba(239,68,68,0.2)' }}>
+            <Trash2 size={16} /> Reset Semua
+          </button>
+          <button className="btn-primary" onClick={() => setShowModal(true)} id="btn-new-order">
+            <Plus size={16} /> Terima Laundry
+          </button>
+        </div>
       </div>
 
       <div className="glass-card" style={{ overflow: 'hidden' }}>
@@ -265,6 +302,7 @@ const TransaksiPage = () => {
                   <th>Tgl Masuk</th>
                   <th>Est. Selesai</th>
                   <th>Status</th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,11 +336,17 @@ const TransaksiPage = () => {
                           <Icon size={10} /> {st.label}
                         </span>
                       </td>
+                      <td>
+                        <button className="btn-icon" onClick={() => setDeleteTarget(order)}
+                          style={{ color: '#f87171', width: 32, height: 32 }} title="Hapus Transaksi">
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 }) : (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={9}>
                       <div className="empty-state">
                         <ShoppingBag size={36} style={{ opacity: 0.3 }} />
                         <span>Tidak ada transaksi ditemukan</span>
@@ -323,6 +367,60 @@ const TransaksiPage = () => {
           onClose={() => setShowModal(false)}
           onSuccess={fetchData}
         />
+      )}
+
+      {/* Delete Modal */}
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="modal-box" style={{ maxWidth: '380px' }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '14px',
+                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+              }}>
+                <Trash2 size={22} style={{ color: '#f87171' }} />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>Hapus Transaksi?</h3>
+              <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
+                Yakin menghapus transaksi <strong style={{ color: 'var(--color-text-main)' }}>{deleteTarget.order_code}</strong>? Data ini akan dihapus selamanya.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Batal</button>
+              <button className="btn-danger" onClick={handleDelete} disabled={actionLoading}>
+                {actionLoading ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Trash2 size={14} />} Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset All Modal */}
+      {showResetModal && (
+        <div className="modal-overlay">
+          <div className="modal-box" style={{ maxWidth: '380px' }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '14px',
+                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+              }}>
+                <Trash2 size={22} style={{ color: '#f87171' }} />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>Reset Seluruh Transaksi?</h3>
+              <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
+                <strong>PERINGATAN!</strong> Seluruh data transaksi, tagihan, laporan, dan riwayat arsip akan dihapus secara permanen. Apakah Anda benar-benar yakin?
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+              <button className="btn-secondary" onClick={() => setShowResetModal(false)}>Batal</button>
+              <button className="btn-danger" onClick={handleResetAll} disabled={actionLoading}>
+                {actionLoading ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Trash2 size={14} />} Ya, Reset Semua Data
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

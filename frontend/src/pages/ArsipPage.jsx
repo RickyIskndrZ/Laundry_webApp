@@ -141,8 +141,9 @@ const ArsipPage = () => {
               <thead>
                 <tr>
                   <th>Detail Order</th>
+                  <th>Tanggal Masuk</th>
                   <th>Petugas (PIC)</th>
-                  <th>Waktu Pickup</th>
+                  <th>Tanggal Pengambilan</th>
                   <th>Catatan</th>
                   <th>Aksi</th>
                 </tr>
@@ -161,6 +162,14 @@ const ArsipPage = () => {
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <User size={12} /> {a.customer?.customer_name}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 500, color: 'var(--color-text-main)', fontSize: '12.5px' }}>
+                        {a.order?.order_date ? new Date(a.order.order_date).toLocaleDateString('id-ID') : '—'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                        {a.order?.order_date ? new Date(a.order.order_date).toLocaleTimeString('id-ID') : ''}
                       </div>
                     </td>
                     <td>
@@ -206,7 +215,7 @@ const ArsipPage = () => {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <div className="empty-state">
                         <Archive size={36} style={{ opacity: 0.3 }} />
                         <span>Tidak ada arsip ditemukan</span>
